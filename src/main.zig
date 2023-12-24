@@ -24,17 +24,21 @@ fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_
     return layerType;
 }
 
-fn Network(comptime input_layers: type) type {
+fn Network(comptime input_layers:[]const type) type {
     comptime {
-        //this is so dumb and hacky
-        const la: input_layers = input_layers{};
+        //initialize one of each type
+        
+        // //this is so dumb and hacky
+        const front:input_layers[0] = input_layers[0]{};
+        const back:input_layers[input_layers.len - 1 ] = input_layers[input_layers.len - 1]{};
         //need to fix this to be an array
         const network_type = struct {
-            comptime layer: input_layers = input_layers{},
-            // hardcode dumbness, also annoyances of functions being from type
-            // and not member
-            pub fn forward(l: input_layers, in: [la.input_size]f64) [la.output_size]f64 {
-                return input_layers.forward(l.weights, in);
+            //need to figure out 
+            layer: input_layers[0] = input_layers[0]{},
+            // // hardcode dumbness, also annoyances of functions being from type
+            // // and not member
+            pub fn forward(l: input_layers[0], in: [front.input_size]f64) [back.output_size]f64 {
+                return input_layers[0].forward(l.weights, in);
             }
         };
         return network_type;
@@ -62,9 +66,17 @@ test "layer test single var" {
 }
 
 test "nn test single var single layer" {
-    const nn_type = Network(Layer(1, 1, relu));
+    const layers: [1]type = .{Layer(1, 1, relu)};
+    const nn_type = Network(&layers);
     var nn: nn_type = nn_type{};
     // //function not preserved?
     try std.testing.expectEqual(nn_type.forward(nn.layer, .{-1}), .{0});
     try std.testing.expectEqual(nn_type.forward(nn.layer, .{1}), .{1});
 }
+
+// test "array of types" {
+//     comptime{
+//         const arr_types:[3]type = .{i64,f64,i32};
+//         _ = arr_types;
+//     }
+// }
