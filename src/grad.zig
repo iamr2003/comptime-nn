@@ -8,6 +8,7 @@ const GradVal = struct {
     val: f64,
     grad: f64,
     // with_respect_to: ?*const []u8 = null,
+    // could change this to have multiple grad values, which would be the way
 };
 
 //need to store NAME of var,
@@ -39,7 +40,7 @@ inline fn div(lhs: GradVal, rhs: GradVal) GradVal {
 //goal is a lot of inefficiency compiles out
 //we are going to duplicate expression a million times, perhaps leaving tree intact would be more helpful
 inline fn variable(val: f64, name: []const u8, respect: []const u8) GradVal {
-    return GradVal{ .val = val, .grad = if (std.mem.eql(u8,name, respect)) 1 else 0 };
+    return GradVal{ .val = val, .grad = if (std.mem.eql(u8, name, respect)) 1 else 0 };
 }
 
 inline fn literal(val: f64) GradVal {
@@ -100,4 +101,15 @@ test "simple single var" {
 
     try std.testing.expectEqual(abs(7), GradVal{ .val = 7, .grad = 1 });
     try std.testing.expectEqual(abs(-7), GradVal{ .val = 7, .grad = -1 });
+}
+
+fn multivar(x: f64, y: f64, respect: []const u8) GradVal {
+    //x^2y + y^2
+    // dx is 2xy
+    //dy is x^2 + 2y
+    return add(mul(mul(variable(x, "x", respect), variable(x, "x", respect)), variable(y, "y", respect)), mul(variable(y, "y", respect), variable(y, "y", respect)));
+}
+test "simple multivar" {
+    try std.testing.expectEqual(multivar(2, 3, "x"), GradVal{ .val = 21, .grad = 12 });
+    try std.testing.expectEqual(multivar(2, 3, "y"), GradVal{ .val = 21, .grad = 10 });
 }
