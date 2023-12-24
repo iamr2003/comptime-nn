@@ -1,15 +1,18 @@
 const std = @import("std");
 
+const g = @import("grad.zig");
+
 //I might not need to be quite this silly
 //might just implement the autograd way and use zig comptime to make it happen
 //let's propogate through a single layer first
-fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_activation: fn (in: f64) f64) type {
+fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_activation: fn (in: g.GradVal) g.GradVal) type {
     const layerType = struct {
         weights: [output_nodes][input_nodes]f64 = [_][input_nodes]f64{[_]f64{1} ** input_nodes} ** output_nodes,
         comptime input_size: usize = input_nodes,
         comptime output_size: usize = output_nodes,
 
         pub fn forward(weights: [output_nodes][input_nodes]f64, input: [input_nodes]f64) [output_nodes]f64 {
+            //will need to be converted into a gradval safe situation
             var output: [output_nodes]f64 = [_]f64{0} ** output_nodes;
             for (0..output_nodes) |output_index| {
                 var sum: f64 = 0;
