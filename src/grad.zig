@@ -43,6 +43,11 @@ pub inline fn variable(val: f64, name: []const u8, respect: []const u8) GradVal 
     return GradVal{ .val = val, .grad = if (std.mem.eql(u8, name, respect)) 1 else 0 };
 }
 
+//version of variable that uses integers to label, since this is much easier to generate
+pub inline fn variable_uuid(val: f64, name: u64, respect: u64) GradVal {
+    return GradVal{ .val = val, .grad = if (name == respect) 1 else 0 };
+}
+
 pub inline fn literal(val: f64) GradVal {
     return GradVal{ .val = val, .grad = 0 };
 }

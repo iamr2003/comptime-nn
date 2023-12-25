@@ -9,7 +9,8 @@ const mul = g.mul;
 const sub = g.sub;
 const variable = g.variable;
 
-fn bowl(x: f64, y: f64, respect: []const u8) g.GradVal {
+//inline is important for the optimization
+inline fn bowl(x: f64, y: f64, respect: []const u8) g.GradVal {
     return add(mul(variable(x, "x", respect), variable(x, "x", respect)), mul(sub(variable(y, "y", respect), g.literal(4)), sub(variable(y, "y", respect), g.literal(4))));
 }
 
