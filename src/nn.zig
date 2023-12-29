@@ -4,17 +4,16 @@ const g = @import("grad.zig");
 const add = g.add;
 const mul = g.mul;
 
-//I might not need to be quite this silly
-//might just implement the autograd way and use zig comptime to make it happen
-//let's propogate through a single layer first
+const type_utils = @import("type_utils.zig");
+
 fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_activation: fn (in: g.GradVal) g.GradVal) type {
     const layerType = struct {
         weights: [output_nodes][input_nodes]f64 = [_][input_nodes]f64{[_]f64{1} ** input_nodes} ** output_nodes,
+        comptime param_count: usize = input_nodes * output_nodes,
         comptime input_size: usize = input_nodes,
         comptime output_size: usize = output_nodes,
 
         pub fn forward(weights: [output_nodes][input_nodes]f64, input: [input_nodes]f64) [output_nodes]f64 {
-            //will need to be converted into a gradval safe situation
             var output: [output_nodes]f64 = [_]f64{0} ** output_nodes;
             for (0..output_nodes) |output_index| {
                 var sum: f64 = 0;
@@ -22,13 +21,12 @@ fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_
                     sum += weights[output_index][input_index] * input_val;
                 }
                 sum /= input_nodes;
-                //yes inefficiency, will recompute with gradients
                 output[output_index] = in_activation(g.GradVal{ .val = sum, .grad = 0 }).val;
             }
             return output;
         }
 
-        //base_name needs to be used to ensure that each layer has uniquely named weights
+        //base_name used to ensure that each layer has uniquely named weights
         pub inline fn backward(weights: [output_nodes][input_nodes]f64, input: [input_nodes]g.GradVal, respect: u64, base_name: u64) [output_nodes]g.GradVal {
             var output: [output_nodes]g.GradVal = [_]g.GradVal{.{ .val = 0, .grad = 0 }} ** output_nodes;
             for (0..output_nodes) |output_index| {
@@ -39,6 +37,8 @@ fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_
                     sum = add(sum, mul(g.variable_uuid(weights[output_index][input_index], id, respect), input_val));
                 }
                 sum = g.div(sum, g.literal(input_nodes));
+
+                //lack of inlining here is not as terrible as it could be, as zero terms are elsewhere in tree
                 output[output_index] = in_activation(sum);
             }
             return output;
@@ -47,9 +47,37 @@ fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_
     return layerType;
 }
 
+//given a list of compiler defined layers:
+//have a forward function that chains all of them
+//have a backward function that does same with weights
+//include gradient step based on an eval function -- could be in a dependent trainer class
+fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: usize) type {
+    //type inference and instantiation is fun
+    //need to turn []type -> { type1, type2.., etc. }
+
+    const layers_flat_types = type_utils.typeFlatten(layer_types);
+    const nn_type = struct {
+        layers: layers_flat_types = layers_flat_types{},
+
+        //sigh I'll need to expose more I think
+        pub fn forward(layers: layers_flat_types, input: [inputs]f64) [outputs]f64 {
+            _ = input;
+            _ = layers;
+        }
+
+        pub fn backward(layers: layers_flat_types, input: [inputs]g.GradVal, respect: u64) [outputs]g.GradVal {
+            //base will be defined internally
+            _ = respect;
+            _ = input;
+            _ = layers;
+        }
+    };
+
+    return nn_type;
+}
+
 //overall goal is to get gradient of each weight with respect to the evaluation metric
 //gradient of eval metric for a weight is calculated based on the gradient of previous
-
 inline fn relu(in: f64) f64 {
     return @max(0, in);
 }
