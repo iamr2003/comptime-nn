@@ -82,7 +82,7 @@ pub inline fn exp(in: GradVal) GradVal {
 
 //need exp for sigmoid
 //tanh, ELU other common ones
-
+//RETURN TO INLINE WHEN POSSIBLE
 pub fn relu(in: GradVal) GradVal {
     return max(literal(0), in);
 }

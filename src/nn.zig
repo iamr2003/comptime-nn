@@ -30,7 +30,7 @@ fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_
 
         //base_name needs to be used to ensure that each layer has uniquely named weights
         pub inline fn backward(weights: [output_nodes][input_nodes]f64, input: [input_nodes]g.GradVal, respect: u64, base_name: u64) [output_nodes]g.GradVal {
-            var output: [output_nodes]g.GradVal = [_]g.GradVal{} ** output_nodes;
+            var output: [output_nodes]g.GradVal = [_]g.GradVal{.{ .val = 0, .grad = 0 }} ** output_nodes;
             for (0..output_nodes) |output_index| {
                 var sum: g.GradVal = g.literal(0);
                 inline for (input, 0..) |input_val, input_index| {
@@ -38,12 +38,10 @@ fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_
                     var id = base_name + output_index * input_nodes + input_index;
                     sum = add(sum, mul(g.variable_uuid(weights[output_index][input_index], id, respect), input_val));
                 }
-                sum = g.div(sum, input_nodes);
-                //yes inefficiency, will recompute with gradients
+                sum = g.div(sum, g.literal(input_nodes));
                 output[output_index] = in_activation(sum);
             }
             return output;
-            //label each weight with a number
         }
     };
     return layerType;
@@ -79,6 +77,6 @@ test "single layer gradient test" {
     try std.testing.expectEqual(l1.forward(layer.weights, .{ 2, -1 }), .{0.5});
     try std.testing.expectEqual(l1.forward(layer.weights, .{ 1, -2 }), .{0});
 
-    try std.testing.expectEqual(l1.backward(layer.weights, .{ g.literal(1), g.literal(1) }, 0, 0)[0].grad, .{0.5});
-    try std.testing.expectEqual(l1.backward(layer.weights, .{ g.literal(1), g.literal(1) }, 1, 0)[0].grad, .{0.5});
+    try std.testing.expectEqual(l1.backward(layer.weights, .{ g.literal(1), g.literal(1) }, 0, 0)[0].grad, 0.5);
+    try std.testing.expectEqual(l1.backward(layer.weights, .{ g.literal(1), g.literal(1) }, 1, 0)[0].grad, 0.5);
 }
