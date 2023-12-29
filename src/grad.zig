@@ -5,8 +5,8 @@ const std = @import("std");
 //may all become SIMD'd at some point
 //this is the traditional way to do it, basically same code as micrograd
 pub const GradVal = struct {
-    val: f64,
-    grad: f64,
+    val: f64 = 0,
+    grad: f64 = 0,
     // with_respect_to: ?*const []u8 = null,
     // could change this to have multiple grad values, which would be the way
 };
@@ -83,8 +83,8 @@ pub inline fn exp(in: GradVal) GradVal {
 //need exp for sigmoid
 //tanh, ELU other common ones
 
-pub inline fn relu(in: GradVal) GradVal {
-    return max(variable(0), in);
+pub fn relu(in: GradVal) GradVal {
+    return max(literal(0), in);
 }
 
 pub inline fn sigmoid(in: GradVal) GradVal {
