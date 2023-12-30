@@ -65,23 +65,26 @@ fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: u
         //sigh I'll need to expose more I think
         // need to feed the output of each one into the next
         pub fn forward(layers: layers_flat_types, input: [inputs]f64) [outputs]f64 {
-            var curr: []const f64 = input[0..];
-            inline for (layer_types, 0..) |layer_type, i| {
-                var dud: layer_type = layer_type{};
-                assert(curr.len == dud.input_size);
-
-                //need to understand how memory alloc works
-                //disgusting, but now need to figure out how to do multiple layers properly
-                curr = layer_type.forward(layers_flat_types.index(layers.data, i).weights, @constCast(curr)[0..dud.input_size].*)[0..];
+            //we're just going to hardcode for now unfortunately
+            //my shame -- compiler will ignore other cases at least
+            switch (layer_types.len) {
+                1 => {
+                    return layer_types[0].forward(layers.l1.weights, input);
+                },
+                2 => {
+                    return layer_types[1].forward(layers.l2.weights, layer_types[0].forward(layers.l1.weights, input));
+                },
+                3 => {
+                    return layer_types[2].forward(layers.l3.weights, layer_types[1].forward(layers.l2.weights, layer_types[0].forward(layers.l1.weights, input)));
+                },
+                4 => {
+                    return layer_types[3].forward(layers.l4.weights, layer_types[2].forward(layers.l3.weights, layer_types[1].forward(layers.l2.weights, layer_types[0].forward(layers.l1.weights, input))));
+                },
+                else => @compileError("not a supported number of nn layers"),
             }
-            assert(curr.len == outputs);
-
-            var out: [outputs]f64 = @constCast(curr)[0..outputs].*;
-            return out;
         }
 
         pub fn backward(layers: layers_flat_types, input: [inputs]g.GradVal, respect: u64) [outputs]g.GradVal {
-            //base will be defined internally
             _ = respect;
             _ = input;
             _ = layers;
@@ -136,6 +139,6 @@ test "network 2 layers forward" {
 
     //
     try std.testing.expectEqual(nn1.forward(nn.layers, .{1}), .{1});
-    // try std.testing.expectEqual(nn1.forward(nn.layers, .{5}), .{5});
-    // try std.testing.expectEqual(nn1.forward(nn.layers, .{-1}), .{0});
+    try std.testing.expectEqual(nn1.forward(nn.layers, .{5}), .{5});
+    try std.testing.expectEqual(nn1.forward(nn.layers, .{-1}), .{0});
 }
