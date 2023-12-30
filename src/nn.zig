@@ -62,8 +62,6 @@ fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: u
     const nn_type = struct {
         layers: layers_flat_types = layers_flat_types{},
 
-        //sigh I'll need to expose more I think
-        // need to feed the output of each one into the next
         pub fn forward(layers: layers_flat_types, input: [inputs]f64) [outputs]f64 {
             //we're just going to hardcode for now unfortunately
             //my shame -- compiler will ignore other cases at least
@@ -85,6 +83,10 @@ fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: u
         }
 
         pub fn backward(layers: layers_flat_types, input: [inputs]g.GradVal, respect: u64) [outputs]g.GradVal {
+            switch (layer_types.len) {
+                1 => {},
+                else => @compileError("not a supported number of nn layers"),
+            }
             _ = respect;
             _ = input;
             _ = layers;
@@ -141,4 +143,13 @@ test "network 2 layers forward" {
     try std.testing.expectEqual(nn1.forward(nn.layers, .{1}), .{1});
     try std.testing.expectEqual(nn1.forward(nn.layers, .{5}), .{5});
     try std.testing.expectEqual(nn1.forward(nn.layers, .{-1}), .{0});
+}
+
+test "network complex layers" {
+    const nn4 = NN(.{ Layer(3, 2, g.relu), Layer(2, 3, g.relu), Layer(3, 2, g.relu) }, 3, 2);
+
+    var nn: nn4 = nn4{};
+
+    try std.testing.expectEqual(nn4.forward(nn.layers, .{ 1, 2, -3 }), .{ 0, 0 });
+    try std.testing.expectEqual(nn4.forward(nn.layers, .{ 1, 2, 3 }), .{ 2, 2 });
 }
