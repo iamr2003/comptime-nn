@@ -57,8 +57,7 @@ fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: u
     //need to turn []type -> { type1, type2.., etc. }
 
     //replace with typeof at some point, and see if there are issues with defaults
-    const layers_flat_types = //@TypeOf(layer_types);
-    type_utils.typeFlatten(layer_types);
+    const layers_flat_types = type_utils.typeFlatten(layer_types);
 
     const nn_type = struct {
         layers: layers_flat_types = layers_flat_types{},
@@ -67,18 +66,17 @@ fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: u
         // need to feed the output of each one into the next
         pub fn forward(layers: layers_flat_types, input: [inputs]f64) [outputs]f64 {
             var curr: []const f64 = input[0..];
-            inline for (layer_types) |layer_type| {
+            inline for (layer_types, 0..) |layer_type, i| {
                 var dud: layer_type = layer_type{};
                 assert(curr.len == dud.input_size);
 
                 //need to understand how memory alloc works
                 //disgusting, but now need to figure out how to do multiple layers properly
-                curr = layer_type.forward(layers.l1.weights, @constCast(curr)[0..dud.input_size].*)[0..];
+                curr = layer_type.forward(layers_flat_types.index(layers.data, i).weights, @constCast(curr)[0..dud.input_size].*)[0..];
             }
             assert(curr.len == outputs);
 
             var out: [outputs]f64 = @constCast(curr)[0..outputs].*;
-            //[_]f64{0} ** outputs;
             return out;
         }
 
