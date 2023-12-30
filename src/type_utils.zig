@@ -54,7 +54,7 @@ pub fn typeFlatten(comptime in_type: anytype) type {
                 1 => data.l2,
                 // 2 => data.l3,
                 // 3 => data.l4,
-                else => @compileError("too big for struct")
+                else => @compileError("too big for struct"),
             }
         }
     };
