@@ -12,8 +12,8 @@ pub fn typeFlatten(comptime in_type: anytype) type {
     for (in_type, 0..) |t, i| {
         fields[i] = .{
             .name = uniqnames[i],
-            .type = t{},
-            .default_value = null,
+            .type = t,
+            .default_value = t{},
             .is_comptime = false,
             .alignment = 0,
         };

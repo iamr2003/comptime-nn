@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 const g = @import("grad.zig");
 const add = g.add;
@@ -55,14 +56,32 @@ fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: u
     //type inference and instantiation is fun
     //need to turn []type -> { type1, type2.., etc. }
 
-    const layers_flat_types = type_utils.typeFlatten(layer_types);
+    //replace with typeof at some point, and see if there are issues with defaults
+    const layers_flat_types = @TypeOf(layer_types);
+
+    // type_utils.typeFlatten(layer_types);
+
     const nn_type = struct {
         layers: layers_flat_types = layers_flat_types{},
 
         //sigh I'll need to expose more I think
+        // need to feed the output of each one into the next
         pub fn forward(layers: layers_flat_types, input: [inputs]f64) [outputs]f64 {
-            _ = input;
-            _ = layers;
+            var curr: []const f64 = input[0..];
+            inline for (layer_types, 0..) |layer_type, i| {
+                var dud: layer_type = layer_type{};
+                assert(curr.len == dud.input_size);
+
+                //need to understand how memory alloc works
+                // currently coercing to void
+                std.debug.print("between: \n{}\n", .{@typeInfo(@TypeOf(layers[i]))});
+                // curr = layer_type.forward(layers[i].weights, curr)[0..];
+            }
+            assert(curr.len == outputs);
+
+            var out: [outputs]f64 = @constCast(curr)[0..outputs].*;
+            //[_]f64{0} ** outputs;
+            return out;
         }
 
         pub fn backward(layers: layers_flat_types, input: [inputs]g.GradVal, respect: u64) [outputs]g.GradVal {
@@ -107,4 +126,20 @@ test "single layer gradient test" {
 
     try std.testing.expectEqual(l1.backward(layer.weights, .{ g.literal(1), g.literal(1) }, 0, 0)[0].grad, 0.5);
     try std.testing.expectEqual(l1.backward(layer.weights, .{ g.literal(1), g.literal(1) }, 1, 0)[0].grad, 0.5);
+}
+
+test "network 2 layers forward" {
+    //might allow a different input format
+    const nn1 = NN(.{ Layer(1, 1, g.relu), Layer(1, 1, g.relu) }, 1, 1);
+
+    var nn: nn1 = nn1{};
+    //I literally can't access what it's evaluated to smh
+    // std.debug.print("layers_flat_type: \n{}\n", .{@typeInfo(@TypeOf(nn.layers))});
+
+    std.debug.print("\nType of nn:\n {}\n", .{@TypeOf(nn)});
+
+    //
+    try std.testing.expectEqual(nn1.forward(nn.layers, .{1}), .{1});
+    // try std.testing.expectEqual(nn1.forward(nn.layers, .{5}), .{5});
+    // try std.testing.expectEqual(nn1.forward(nn.layers, .{-1}), .{0});
 }
