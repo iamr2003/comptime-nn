@@ -10,10 +10,11 @@ pub fn typeFlatten(comptime in_type: anytype) type {
     var uniqnames: [4][]const u8 = .{ "l1", "l2", "l3", "l4" };
 
     for (in_type, 0..) |t, i| {
+        const default = t{};
         fields[i] = .{
             .name = uniqnames[i],
             .type = t,
-            .default_value = t{},
+            .default_value = &default,
             .is_comptime = false,
             .alignment = 0,
         };
