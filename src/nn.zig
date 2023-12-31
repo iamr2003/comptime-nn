@@ -4,6 +4,7 @@ const assert = std.debug.assert;
 const g = @import("grad.zig");
 const add = g.add;
 const mul = g.mul;
+const literal = g.literal;
 
 const type_utils = @import("type_utils.zig");
 
@@ -84,12 +85,20 @@ fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: u
 
         pub fn backward(layers: layers_flat_types, input: [inputs]g.GradVal, respect: u64) [outputs]g.GradVal {
             switch (layer_types.len) {
-                1 => {},
+                1 => {
+                    return layer_types[0].backward(layers.l1.weights, input, respect, 0);
+                },
+                2 => {
+                    return layer_types[1].backward(layers.l2.weights, layer_types[0].backward(layers.l1.weights, input, respect, 0), respect, layers.l1.param_count);
+                },
+                3 => {
+                    return layer_types[2].backward(layers.l3.weights, layer_types[1].backward(layers.l2.weights, layer_types[0].backward(layers.l1.weights, input, respect, 0), respect, layers.l1.param_count), respect, layers.l1.param_count + layers.l2.param_count);
+                },
+                4 => {
+                    return layer_types[3].backward(layers.l4.weights, layer_types[2].backward(layers.l3.weights, layer_types[1].backward(layers.l2.weights, layer_types[0].backward(layers.l1.weights, input, respect, 0), respect, layers.l1.param_count), respect, layers.l1.param_count + layers.l2.param_count), respect, layers.l1.param_count + layers.l2.param_count + layers.l3.param_count);
+                },
                 else => @compileError("not a supported number of nn layers"),
             }
-            _ = respect;
-            _ = input;
-            _ = layers;
         }
     };
 
@@ -134,12 +143,8 @@ test "network 2 layers forward" {
     const nn1 = NN(.{ Layer(1, 1, g.relu), Layer(1, 1, g.relu) }, 1, 1);
 
     var nn: nn1 = nn1{};
-    //I literally can't access what it's evaluated to smh
-    // std.debug.print("layers_flat_type: \n{}\n", .{@typeInfo(@TypeOf(nn.layers))});
-
     std.debug.print("\nType of nn:\n {}\n", .{@TypeOf(nn)});
 
-    //
     try std.testing.expectEqual(nn1.forward(nn.layers, .{1}), .{1});
     try std.testing.expectEqual(nn1.forward(nn.layers, .{5}), .{5});
     try std.testing.expectEqual(nn1.forward(nn.layers, .{-1}), .{0});
@@ -147,9 +152,21 @@ test "network 2 layers forward" {
 
 test "network complex layers" {
     const nn4 = NN(.{ Layer(3, 2, g.relu), Layer(2, 3, g.relu), Layer(3, 2, g.relu) }, 3, 2);
-
     var nn: nn4 = nn4{};
 
     try std.testing.expectEqual(nn4.forward(nn.layers, .{ 1, 2, -3 }), .{ 0, 0 });
     try std.testing.expectEqual(nn4.forward(nn.layers, .{ 1, 2, 3 }), .{ 2, 2 });
+}
+
+test "network multilayer gradient test" {
+    const nn3 = NN(.{ Layer(2, 2, g.relu), Layer(2, 2, g.relu) }, 2, 2);
+    var nn: nn3 = nn3{};
+
+    //note numbers change with not 1/1 as inputs, as they should
+    // this is not the most nuanced test, but I don't feel like hand calculating more derivatives
+    try std.testing.expectEqual(nn3.backward(nn.layers, .{ literal(1), literal(1) }, 4)[0].grad, 0.5);
+    try std.testing.expectEqual(nn3.backward(nn.layers, .{ literal(1), literal(1) }, 0)[0].grad, 0.25);
+    try std.testing.expectEqual(nn3.backward(nn.layers, .{ literal(1), literal(1) }, 3)[0].grad, 0.25);
+    try std.testing.expectEqual(nn3.backward(nn.layers, .{ literal(1), literal(1) }, 7)[0].grad, 0);
+    try std.testing.expectEqual(nn3.backward(nn.layers, .{ literal(1), literal(1) }, 7)[1].grad, 0.5);
 }
