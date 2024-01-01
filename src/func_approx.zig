@@ -45,6 +45,6 @@ pub fn main() !void {
         }
 
         var curr_loss = nn_type.train_step(&approx.layers, &batch_in, &batch_out, loss, 0.1);
-        std.debug.print("Step {}, loss: {}", .{ step, curr_loss });
+        std.debug.print("Step {}, loss: {}\n", .{ step, curr_loss });
     }
 }
