@@ -179,14 +179,14 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
             }
 
             //normalize overall gradient vector
-            var grad_mag: f64 = 0;
-            for (dweight_deval) |grad| {
-                grad_mag += grad;
-            }
-
-            for (0..total_parameters) |i| {
-                dweight_deval[i] /= grad_mag;
-            }
+            // var grad_mag: f64 = 0;
+            // for (dweight_deval) |grad| {
+            //     grad_mag += grad;
+            // }
+            //
+            // for (0..total_parameters) |i| {
+            //     dweight_deval[i] /= grad_mag;
+            // }
 
             //do one step of gradient update
 

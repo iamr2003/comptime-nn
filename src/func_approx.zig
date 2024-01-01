@@ -4,14 +4,15 @@ const nn = @import("nn.zig");
 const g = @import("grad.zig");
 const mul = g.mul;
 const add = g.add;
-const vari = g.variable_uuid;
 
 const Layer = nn.Layer;
 
 //nonlinear function to approximate
 //x^2 + y^2 -3xy
 pub fn to_approx(in: [2]f64) [1]f64 { //in grad val to make eval func easier
-    return .{(in[0] * in[0]) + (in[1] * in[1]) + (-3 * in[0] * in[1])};
+    // return .{(in[0] * in[0]) + (in[1] * in[1]) + (-3 * in[0] * in[1])};
+    //simple linear function
+    return .{in[0] + in[1]};
 }
 
 pub fn loss(expected: [1]g.GradVal, actual: [1]g.GradVal) g.GradVal {
@@ -30,13 +31,25 @@ pub fn randFromRange(range: [2]f64, random: rand.Random) f64 {
     return range[0] + (range[1] - range[0]) * random.float(f64);
 }
 
+//this task might be way too hard for a bad slow model like this
+//might switch to something simple like binary ops eventually
+//am also curious how much faster simd is
+// my loss function might also suck
 pub fn main() !void {
-    const nn_type = nn.NN(.{ Layer(2, 10, g.relu), Layer(10, 10, g.relu), Layer(10, 1, g.relu) }, 2, 1);
+    const nn_type = nn.NN(
+        .{
+            Layer(2, 16, g.relu),
+            Layer(16, 16, g.relu),
+            Layer(16, 1, g.relu),
+        },
+        2,
+        1,
+    );
 
     var approx: nn_type = nn_type{};
 
-    const steps = 100;
-    const batch_size = 10000;
+    const steps = 10000;
+    const batch_size = 100;
 
     var rng = rand.DefaultPrng.init(0);
     const random = rng.random();
@@ -53,9 +66,18 @@ pub fn main() !void {
         }
 
         //rerun on same data for awhile
-        const batch_cycles = 100;
+        const batch_cycles = 1;
         for (0..batch_cycles) |batch_cycle| {
-            var curr_loss = nn_type.train_step(&approx.layers, &batch_in, &batch_out, loss, 0.0001);
+            //could use an adaptive learning rate
+            var curr_loss = nn_type.train_step(
+                &approx.layers,
+                &batch_in,
+                &batch_out,
+                loss,
+                // (1.0 / @as(f64 , @floatFromInt(step))),
+                // 0.00001
+                1 - (0.9 * @as(f64, @floatFromInt(step)) / 100),
+            );
             std.debug.print("Step {}.{}, loss: {}\n", .{ step, batch_cycle, curr_loss });
         }
     }
