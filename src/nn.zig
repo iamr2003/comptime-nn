@@ -7,7 +7,11 @@ const mul = g.mul;
 const literal = g.literal;
 const type_utils = @import("type_utils.zig");
 
-pub fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_activation: fn (in: g.GradVal) g.GradVal) type {
+pub fn Layer(
+    comptime input_nodes: usize,
+    comptime output_nodes: usize,
+    comptime in_activation: *const fn (in: g.GradVal) g.GradVal,
+) type {
     const layerType = struct {
         weights: [output_nodes][input_nodes]f64 = [_][input_nodes]f64{[_]f64{1} ** input_nodes} ** output_nodes,
         comptime param_count: usize = input_nodes * output_nodes,
@@ -96,20 +100,56 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
                     return layer_types[0].backward(layers.l1.weights, input, respect, 0);
                 },
                 2 => {
-                    return layer_types[1].backward(layers.l2.weights, layer_types[0].backward(layers.l1.weights, input, respect, 0), respect, layers.l1.param_count);
+                    return layer_types[1].backward(
+                        layers.l2.weights,
+                        layer_types[0].backward(layers.l1.weights, input, respect, 0),
+                        respect,
+                        layers.l1.param_count,
+                    );
                 },
                 3 => {
-                    return layer_types[2].backward(layers.l3.weights, layer_types[1].backward(layers.l2.weights, layer_types[0].backward(layers.l1.weights, input, respect, 0), respect, layers.l1.param_count), respect, layers.l1.param_count + layers.l2.param_count);
+                    return layer_types[2].backward(
+                        layers.l3.weights,
+                        layer_types[1].backward(
+                            layers.l2.weights,
+                            layer_types[0].backward(layers.l1.weights, input, respect, 0),
+                            respect,
+                            layers.l1.param_count,
+                        ),
+                        respect,
+                        layers.l1.param_count + layers.l2.param_count,
+                    );
                 },
                 4 => {
-                    return layer_types[3].backward(layers.l4.weights, layer_types[2].backward(layers.l3.weights, layer_types[1].backward(layers.l2.weights, layer_types[0].backward(layers.l1.weights, input, respect, 0), respect, layers.l1.param_count), respect, layers.l1.param_count + layers.l2.param_count), respect, layers.l1.param_count + layers.l2.param_count + layers.l3.param_count);
+                    return layer_types[3].backward(
+                        layers.l4.weights,
+                        layer_types[2].backward(
+                            layers.l3.weights,
+                            layer_types[1].backward(
+                                layers.l2.weights,
+                                layer_types[0].backward(layers.l1.weights, input, respect, 0),
+                                respect,
+                                layers.l1.param_count,
+                            ),
+                            respect,
+                            layers.l1.param_count + layers.l2.param_count,
+                        ),
+                        respect,
+                        layers.l1.param_count + layers.l2.param_count + layers.l3.param_count,
+                    );
                 },
                 else => @compileError("not a supported number of nn layers"),
             }
         }
 
         //updates the layers in place, output current loss
-        pub fn train_step(layers: *layers_flat_types, batch_inputs: [][inputs]f64, batch_outputs: [][outputs]f64, loss_fn: *const fn (expected: [outputs]g.GradVal, actual: [outputs]g.GradVal) g.GradVal, scale: f64) f64 {
+        pub fn train_step(
+            layers: *layers_flat_types,
+            batch_inputs: [][inputs]f64,
+            batch_outputs: [][outputs]f64,
+            loss_fn: *const fn([outputs]g.GradVal, [outputs]g.GradVal) g.GradVal,
+            scale: f64,
+        ) f64 {
             //return new version of layers, aka weights
             //gradient of each weight with respect to the output
             var dweight_deval: [total_parameters]f64 = [_]f64{0} ** total_parameters;
@@ -146,7 +186,7 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
                     layers.l1.weights[output_index][input_index] -= scale * dweight_deval[weight_id];
                 }
             }
-            
+
             if (layer_types.len >= 2) {
                 for (0..layers.l2.param_count) |weight_id| {
                     var i = weight_id - layers.l1.param_count;

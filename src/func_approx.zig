@@ -17,7 +17,7 @@ pub fn to_approx(in: [2]f64) [1]f64 { //in grad val to make eval func easier
 pub fn loss(expected: [1]g.GradVal, actual: [1]g.GradVal) g.GradVal {
     var dx = g.sub(expected[0], actual[0]);
     //just squared euclidean distance
-    return mul(dx,dx);
+    return mul(dx, dx);
 }
 
 pub fn randFromRange(range: [2]f64, random: rand.Random) f64 {
@@ -45,7 +45,6 @@ pub fn main() !void {
         }
 
         var curr_loss = nn_type.train_step(&approx.layers, &batch_in, &batch_out, loss, 0.1);
-        _ = curr_loss;
-        std.debug.print("Step {}, loss: {}", .{ step, loss });
+        std.debug.print("Step {}, loss: {}", .{ step, curr_loss });
     }
 }
