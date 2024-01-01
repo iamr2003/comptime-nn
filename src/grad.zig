@@ -87,8 +87,18 @@ pub fn relu(in: GradVal) GradVal {
     return max(literal(0), in);
 }
 
-pub inline fn sigmoid(in: GradVal) GradVal {
-    return div(exp(in), add(variable(1), exp(in)));
+pub fn sigmoid(in: GradVal) GradVal {
+    return div(exp(in), add(literal(1), exp(in)));
+}
+
+//utils
+
+pub fn vecToGrad(comptime size: usize, in: [size]f64) [size]GradVal {
+    var out: [in.len]GradVal = literal(0) ** in.len;
+    for (in, 0..) |v, i| {
+        out[i] = literal(v);
+    }
+    return out;
 }
 
 //examples

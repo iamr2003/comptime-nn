@@ -5,10 +5,9 @@ const g = @import("grad.zig");
 const add = g.add;
 const mul = g.mul;
 const literal = g.literal;
-
 const type_utils = @import("type_utils.zig");
 
-fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_activation: fn (in: g.GradVal) g.GradVal) type {
+pub fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_activation: fn (in: g.GradVal) g.GradVal) type {
     const layerType = struct {
         weights: [output_nodes][input_nodes]f64 = [_][input_nodes]f64{[_]f64{1} ** input_nodes} ** output_nodes,
         comptime param_count: usize = input_nodes * output_nodes,
@@ -53,15 +52,23 @@ fn Layer(comptime input_nodes: usize, comptime output_nodes: usize, comptime in_
 //have a forward function that chains all of them
 //have a backward function that does same with weights
 //include gradient step based on an eval function -- could be in a dependent trainer class
-fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: usize) type {
+pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: usize) type {
     //type inference and instantiation is fun
     //need to turn []type -> { type1, type2.., etc. }
 
     //replace with typeof at some point, and see if there are issues with defaults
     const layers_flat_types = type_utils.typeFlatten(layer_types);
+    comptime var total_parameters: u64 = 0;
+    comptime {
+        for (layer_types) |t| {
+            var init = t{};
+            total_parameters += init.param_count;
+        }
+    }
 
     const nn_type = struct {
         layers: layers_flat_types = layers_flat_types{},
+        comptime num_layers: usize = layer_types.len,
 
         pub fn forward(layers: layers_flat_types, input: [inputs]f64) [outputs]f64 {
             //we're just going to hardcode for now unfortunately
@@ -99,6 +106,74 @@ fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime outputs: u
                 },
                 else => @compileError("not a supported number of nn layers"),
             }
+        }
+
+        //updates the layers in place, output current loss
+        pub fn train_step(layers: *layers_flat_types, batch_inputs: [][inputs]f64, batch_outputs: [][outputs]f64, comptime loss_fn: fn (expected: [outputs]g.GradVal, actual: [outputs]g.GradVal) g.GradVal, scale: f64) f64 {
+            //return new version of layers, aka weights
+            //gradient of each weight with respect to the output
+            var dweight_deval: [total_parameters]f64 = [_]f64{0} ** total_parameters;
+
+            //take averaged gradient with respect to whole batch
+            for (batch_inputs, 0..) |input, batch_id| {
+                for (0..total_parameters) |weight_id| {
+                    dweight_deval[weight_id] +=
+                        loss_fn(g.vecToGrad(outputs, batch_outputs[batch_id]), backward(layers.*, g.vecToGrad(inputs, input), weight_id)).grad;
+                }
+            }
+
+            var avg_loss: f64 = 0;
+            for (batch_inputs, 0..) |input, batch_id| {
+                avg_loss +=
+                    loss_fn(g.vecToGrad(outputs, batch_outputs[batch_id]), backward(layers.*, g.vecToGrad(inputs, input), 0)).val;
+            }
+
+            avg_loss /= @floatFromInt(batch_inputs.len);
+
+            //normalize for batch_size
+            for (0..total_parameters) |i| {
+                dweight_deval[i] /= @floatFromInt(batch_inputs.len);
+            }
+
+            //do one step of gradient update
+
+            //more hardcoding, that again compiles out-- otherwise indexing gets fun
+            if (layer_types.len >= 1) {
+                for (0..layers.l1.param_count) |weight_id| {
+                    var i = weight_id;
+                    var input_index = i % layers.l1.input_size;
+                    var output_index = @divFloor(i, layers.l1.input_size);
+                    layers.l1.weights[output_index][input_index] -= scale * dweight_deval[weight_id];
+                }
+            }
+            
+            if (layer_types.len >= 2) {
+                for (0..layers.l2.param_count) |weight_id| {
+                    var i = weight_id - layers.l1.param_count;
+                    var input_index = i % layers.l2.input_size;
+                    var output_index = @divFloor(i, layers.l2.input_size);
+                    layers.l2.weights[output_index][input_index] -= scale * dweight_deval[weight_id];
+                }
+            }
+
+            if (layer_types.len >= 3) {
+                for (0..layers.l3.param_count) |weight_id| {
+                    var i = weight_id - layers.l1.param_count - layers.l2.param_count;
+                    var input_index = i % layers.l3.input_size;
+                    var output_index = @divFloor(i, layers.l3.input_size);
+                    layers.l3.weights[output_index][input_index] -= scale * dweight_deval[weight_id];
+                }
+            }
+            if (layer_types.len >= 4) {
+                for (0..layers.l4.param_count) |weight_id| {
+                    var i = weight_id - layers.l1.param_count - layers.l2.param_count - layers.l3.param_count;
+                    var input_index = i % layers.l4.input_size;
+                    var output_index = @divFloor(i, layers.l4.input_size);
+                    layers.l4.weights[output_index][input_index] -= scale * dweight_deval[weight_id];
+                }
+            }
+
+            return avg_loss;
         }
     };
 
