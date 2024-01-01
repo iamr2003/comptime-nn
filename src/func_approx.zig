@@ -31,12 +31,12 @@ pub fn randFromRange(range: [2]f64, random: rand.Random) f64 {
 }
 
 pub fn main() !void {
-    const nn_type = nn.NN(.{ Layer(2, 4, g.relu), Layer(4, 1, g.relu) }, 2, 1);
+    const nn_type = nn.NN(.{ Layer(2, 10, g.relu), Layer(10, 1, g.relu) }, 2, 1);
 
     var approx: nn_type = nn_type{};
 
     const steps = 100;
-    const batch_size = 20;
+    const batch_size = 10000;
 
     var rng = rand.DefaultPrng.init(0);
     const random = rng.random();
@@ -50,7 +50,7 @@ pub fn main() !void {
             batch_out[i] = to_approx(batch_in[i]);
         }
 
-        var curr_loss = nn_type.train_step(&approx.layers, &batch_in, &batch_out, loss, 0.1);
+        var curr_loss = nn_type.train_step(&approx.layers, &batch_in, &batch_out, loss, 0.001);
         std.debug.print("Step {}, loss: {}\n", .{ step, curr_loss });
     }
 }
