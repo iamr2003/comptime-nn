@@ -31,6 +31,7 @@ pub inline fn mul(lhs: GradVal, rhs: GradVal) GradVal {
 }
 
 pub inline fn div(lhs: GradVal, rhs: GradVal) GradVal {
+    //nan issues
     return GradVal{
         .val = lhs.val / rhs.val,
         .grad = ((rhs.val * lhs.grad) - (lhs.val * rhs.grad)) / (rhs.val * rhs.val),
@@ -88,6 +89,7 @@ pub fn relu(in: GradVal) GradVal {
 }
 
 pub fn sigmoid(in: GradVal) GradVal {
+    //need some safeties I think
     return div(exp(in), add(literal(1), exp(in)));
 }
 

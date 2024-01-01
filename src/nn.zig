@@ -150,6 +150,9 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
             loss_fn: *const fn ([outputs]g.GradVal, [outputs]g.GradVal) g.GradVal,
             scale: f64,
         ) f64 {
+            std.debug.assert(batch_inputs.len == batch_outputs.len);
+            std.debug.assert(batch_inputs.len > 0);
+
             //return new version of layers, aka weights
             //gradient of each weight with respect to the output
             var dweight_deval: [total_parameters]f64 = [_]f64{0} ** total_parameters;

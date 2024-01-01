@@ -15,9 +15,15 @@ pub fn to_approx(in: [2]f64) [1]f64 { //in grad val to make eval func easier
 }
 
 pub fn loss(expected: [1]g.GradVal, actual: [1]g.GradVal) g.GradVal {
+    std.debug.assert(expected[0].val != std.math.nan_f64);
+    std.debug.assert(expected[0].val != std.math.nan_f64);
+
     var dx = g.sub(expected[0], actual[0]);
     //just squared euclidean distance
-    return mul(dx, dx);
+    var out = mul(dx, dx);
+    std.debug.assert(out.val >= 0);
+    std.debug.assert(out.grad != std.math.nan_f64);
+    return out;
 }
 
 pub fn randFromRange(range: [2]f64, random: rand.Random) f64 {
@@ -25,7 +31,7 @@ pub fn randFromRange(range: [2]f64, random: rand.Random) f64 {
 }
 
 pub fn main() !void {
-    const nn_type = nn.NN(.{ Layer(2, 4, g.sigmoid), Layer(4, 1, g.sigmoid) }, 2, 1);
+    const nn_type = nn.NN(.{ Layer(2, 4, g.relu), Layer(4, 1, g.relu) }, 2, 1);
 
     var approx: nn_type = nn_type{};
 
