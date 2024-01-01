@@ -109,7 +109,7 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
         }
 
         //updates the layers in place, output current loss
-        pub fn train_step(layers: *layers_flat_types, batch_inputs: [][inputs]f64, batch_outputs: [][outputs]f64, comptime loss_fn: fn (expected: [outputs]g.GradVal, actual: [outputs]g.GradVal) g.GradVal, scale: f64) f64 {
+        pub fn train_step(layers: *layers_flat_types, batch_inputs: [][inputs]f64, batch_outputs: [][outputs]f64, loss_fn: *const fn (expected: [outputs]g.GradVal, actual: [outputs]g.GradVal) g.GradVal, scale: f64) f64 {
             //return new version of layers, aka weights
             //gradient of each weight with respect to the output
             var dweight_deval: [total_parameters]f64 = [_]f64{0} ** total_parameters;

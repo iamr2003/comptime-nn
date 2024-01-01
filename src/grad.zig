@@ -94,7 +94,7 @@ pub fn sigmoid(in: GradVal) GradVal {
 //utils
 
 pub fn vecToGrad(comptime size: usize, in: [size]f64) [size]GradVal {
-    var out: [in.len]GradVal = literal(0) ** in.len;
+    var out: [size]GradVal = undefined;
     for (in, 0..) |v, i| {
         out[i] = literal(v);
     }
