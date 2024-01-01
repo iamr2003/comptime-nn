@@ -178,6 +178,16 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
                 dweight_deval[i] /= @floatFromInt(batch_inputs.len);
             }
 
+            //normalize overall gradient vector
+            var grad_mag: f64 = 0;
+            for (dweight_deval) |grad| {
+                grad_mag += grad;
+            }
+
+            for (0..total_parameters) |i| {
+                dweight_deval[i] /= grad_mag;
+            }
+
             //do one step of gradient update
 
             //more hardcoding, that again compiles out-- otherwise indexing gets fun

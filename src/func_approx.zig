@@ -31,7 +31,7 @@ pub fn randFromRange(range: [2]f64, random: rand.Random) f64 {
 }
 
 pub fn main() !void {
-    const nn_type = nn.NN(.{ Layer(2, 10, g.relu), Layer(10, 1, g.relu) }, 2, 1);
+    const nn_type = nn.NN(.{ Layer(2, 10, g.relu), Layer(10, 10, g.relu), Layer(10, 1, g.relu) }, 2, 1);
 
     var approx: nn_type = nn_type{};
 
@@ -40,7 +40,9 @@ pub fn main() !void {
 
     var rng = rand.DefaultPrng.init(0);
     const random = rng.random();
-    const range: [2]f64 = .{ -100, 100 };
+    //see if can approx over small domain
+    //possible it should also be in the
+    const range: [2]f64 = .{ -10, 10 };
     for (0..steps) |step| {
         //randomly sample some points
         var batch_in: [batch_size][2]f64 = [_][2]f64{.{ 0, 0 }} ** batch_size;
@@ -50,7 +52,11 @@ pub fn main() !void {
             batch_out[i] = to_approx(batch_in[i]);
         }
 
-        var curr_loss = nn_type.train_step(&approx.layers, &batch_in, &batch_out, loss, 0.001);
-        std.debug.print("Step {}, loss: {}\n", .{ step, curr_loss });
+        //rerun on same data for awhile
+        const batch_cycles = 100;
+        for (0..batch_cycles) |batch_cycle| {
+            var curr_loss = nn_type.train_step(&approx.layers, &batch_in, &batch_out, loss, 0.0001);
+            std.debug.print("Step {}.{}, loss: {}\n", .{ step, batch_cycle, curr_loss });
+        }
     }
 }
