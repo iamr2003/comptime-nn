@@ -147,7 +147,7 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
             layers: *layers_flat_types,
             batch_inputs: [][inputs]f64,
             batch_outputs: [][outputs]f64,
-            loss_fn: *const fn([outputs]g.GradVal, [outputs]g.GradVal) g.GradVal,
+            loss_fn: *const fn ([outputs]g.GradVal, [outputs]g.GradVal) g.GradVal,
             scale: f64,
         ) f64 {
             //return new version of layers, aka weights
@@ -189,27 +189,30 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
 
             if (layer_types.len >= 2) {
                 for (0..layers.l2.param_count) |weight_id| {
-                    var i = weight_id - layers.l1.param_count;
+                    var i = weight_id;
+                    var offset = layers.l1.param_count;
                     var input_index = i % layers.l2.input_size;
                     var output_index = @divFloor(i, layers.l2.input_size);
-                    layers.l2.weights[output_index][input_index] -= scale * dweight_deval[weight_id];
+                    layers.l2.weights[output_index][input_index] -= scale * dweight_deval[weight_id + offset];
                 }
             }
 
             if (layer_types.len >= 3) {
                 for (0..layers.l3.param_count) |weight_id| {
-                    var i = weight_id - layers.l1.param_count - layers.l2.param_count;
+                    var i = weight_id;
+                    var offset = layers.l1.param_count + layers.l2.param_count;
                     var input_index = i % layers.l3.input_size;
                     var output_index = @divFloor(i, layers.l3.input_size);
-                    layers.l3.weights[output_index][input_index] -= scale * dweight_deval[weight_id];
+                    layers.l3.weights[output_index][input_index] -= scale * dweight_deval[weight_id + offset];
                 }
             }
             if (layer_types.len >= 4) {
                 for (0..layers.l4.param_count) |weight_id| {
-                    var i = weight_id - layers.l1.param_count - layers.l2.param_count - layers.l3.param_count;
+                    var i = weight_id;
+                    var offset = layers.l1.param_count + layers.l2.param_count + layers.l3.param_count;
                     var input_index = i % layers.l4.input_size;
                     var output_index = @divFloor(i, layers.l4.input_size);
-                    layers.l4.weights[output_index][input_index] -= scale * dweight_deval[weight_id];
+                    layers.l4.weights[output_index][input_index] -= scale * dweight_deval[weight_id + offset];
                 }
             }
 
