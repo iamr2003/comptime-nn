@@ -326,6 +326,23 @@ test "no loss test" {
     try std.testing.expectEqual(nn.layers.l1.weights[0][0], 1);
 }
 
+test "no loss test multilayer" {
+    //the most basic, 1 weight, learning a linear relationship
+    const nn_t = NN(.{ Layer(1, 1, g.linear), Layer(1, 1, g.linear), Layer(1, 1, g.linear), Layer(1, 1, g.linear) }, 1, 1);
+    var nn: nn_t = nn_t{};
+
+    var correct_in: [4][1]f64 = .{ .{5}, .{2.3}, .{-10}, .{-800.62} };
+    var correct_out: [4][1]f64 = .{ .{5}, .{2.3}, .{-10}, .{-800.62} };
+
+    var correct_loss = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.01);
+    //verify no loss, and no changed vars
+    try std.testing.expectEqual(correct_loss, 0);
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], 1);
+    try std.testing.expectEqual(nn.layers.l2.weights[0][0], 1);
+    try std.testing.expectEqual(nn.layers.l3.weights[0][0], 1);
+    try std.testing.expectEqual(nn.layers.l4.weights[0][0], 1);
+}
+
 test "simple linear single layer training" {
     //the most basic, 1 weight, learning a linear relationship
     const nn_t = NN(.{Layer(1, 1, g.linear)}, 1, 1);
@@ -346,3 +363,26 @@ test "simple linear single layer training" {
     try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // 6 * 2(30-10) * -1 * 0.1
     //correct directions, would eventually converge
 }
+
+// test "simple linear multilayer training" {
+//     //2 weights, in sequence
+//     const nn_t = NN(.{ Layer(1, 1, g.linear), Layer(1, 1, g.linear) }, 1, 1);
+//     var nn: nn_t = nn_t{};
+//
+//     var correct_in: [1][1]f64 = .{.{5}};
+//     var correct_out: [1][1]f64 = .{.{10}};
+//
+//     var loss_1 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+//
+//     // move in correct direction
+//     try std.testing.expectEqual(loss_1, 25); //5*5
+//
+//     //TOO BE UPDATED
+//     //derivative calcs change
+//     try std.testing.expectEqual(nn.layers.l1.weights[0][0], 6); // 5 * 2(5-10) * -1 * 0.1
+//
+//     var loss_2 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+//
+//     try std.testing.expectEqual(loss_2, 400); //((6*5)-10)**2
+//     try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // 6 * 2(30-10) * -1 * 0.1
+// }
