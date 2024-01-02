@@ -40,7 +40,7 @@ pub fn main() !void {
         .{
             Layer(2, 16, g.relu),
             Layer(16, 16, g.relu),
-            Layer(16, 1, g.relu),
+            Layer(16, 1, g.linear), // believe or not, can't relu if you want to output neg
         },
         2,
         1,

@@ -364,21 +364,70 @@ test "simple linear single layer training" {
     //correct directions, would eventually converge
 }
 
-// test "simple linear multilayer training" {
-//     //2 weights, in sequence
-//     const nn_t = NN(.{ Layer(1, 1, g.linear), Layer(1, 1, g.linear) }, 1, 1);
+test "simple linear multilayer training" {
+    //2 weights, in sequence
+    const nn_t = NN(.{ Layer(1, 1, g.linear), Layer(1, 1, g.linear) }, 1, 1);
+    var nn: nn_t = nn_t{};
+
+    var correct_in: [1][1]f64 = .{.{5}};
+    var correct_out: [1][1]f64 = .{.{10}};
+
+    var loss_1 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+
+    // move in correct direction
+    try std.testing.expectEqual(loss_1, 25); //5*5
+
+    //weights are basically same situation here
+    //because no nonlinearity, weights end up doing exact same thing
+    try std.testing.expectEqual(nn.layers.l2.weights[0][0], 6); // 5 * 2(5-10) * -1 * 0.1
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], 6); // 5 * 2(5-10) * -1 * 0.1
+
+    var loss_2 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.01);
+
+    try std.testing.expectEqual(loss_2, 28900); //((6*5*6)-10)**2
+
+    //check correct direction
+    try std.testing.expect(nn.layers.l1.weights[0][0] < 6);
+    try std.testing.expect(nn.layers.l2.weights[0][0] < 6);
+}
+
+test "simple non linear single layer training positive" {
+    //the most basic, 1 weight, with a relu relationship
+    const nn_t = NN(.{Layer(1, 1, g.linear)}, 1, 1);
+    var nn: nn_t = nn_t{};
+
+    //with positive should do exactly the same thing
+
+    var correct_in: [1][1]f64 = .{.{5}};
+    var correct_out: [1][1]f64 = .{.{10}};
+
+    var loss_1 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+
+    // move in correct direction
+    try std.testing.expectEqual(loss_1, 25); //5*5
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], 6); // 5 * 2(5-10) * -1 * 0.1
+
+    var loss_2 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+
+    try std.testing.expectEqual(loss_2, 400); //((6*5)-10)**2
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // 6 * 2(30-10) * -1 * 0.1
+}
+
+// test "simple non linear single layer training negative" {
+//     //the most basic, 1 weight, with a relu relationship
+//     const nn_t = NN(.{Layer(1, 1, g.linear)}, 1, 1);
 //     var nn: nn_t = nn_t{};
 //
+//
 //     var correct_in: [1][1]f64 = .{.{5}};
-//     var correct_out: [1][1]f64 = .{.{10}};
+//
+//     //impossible to output, so will have issues
+//     var correct_out: [1][1]f64 = .{.{-10}};
 //
 //     var loss_1 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
 //
 //     // move in correct direction
 //     try std.testing.expectEqual(loss_1, 25); //5*5
-//
-//     //TOO BE UPDATED
-//     //derivative calcs change
 //     try std.testing.expectEqual(nn.layers.l1.weights[0][0], 6); // 5 * 2(5-10) * -1 * 0.1
 //
 //     var loss_2 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
