@@ -88,10 +88,16 @@ pub fn relu(in: GradVal) GradVal {
     return max(literal(0), in);
 }
 
+//just map straight through
+pub fn linear(in:GradVal) GradVal{
+    return in;
+}
+
 pub fn sigmoid(in: GradVal) GradVal {
     //need some safeties I think
     return div(exp(in), add(literal(1), exp(in)));
 }
+
 
 //utils
 

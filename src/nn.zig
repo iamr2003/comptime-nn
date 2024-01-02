@@ -301,3 +301,48 @@ test "network multilayer gradient test" {
     try std.testing.expectEqual(nn3.backward(nn.layers, .{ literal(1), literal(1) }, 7)[0].grad, 0);
     try std.testing.expectEqual(nn3.backward(nn.layers, .{ literal(1), literal(1) }, 7)[1].grad, 0.5);
 }
+
+fn lin_func(comptime slope: f64, in: [1]f64) [1]f64 {
+    return .{slope * in[0]};
+}
+
+fn square_loss(expect: [1]g.GradVal, actual: [1]g.GradVal) g.GradVal {
+    var diff = g.sub(expect[0], actual[0]);
+    return g.mul(diff, diff);
+}
+
+//there are some issues, so let's try to create minimal reproducible small gradient steps
+test "no loss test" {
+    //the most basic, 1 weight, learning a linear relationship
+    const nn_t = NN(.{Layer(1, 1, g.linear)}, 1, 1);
+    var nn: nn_t = nn_t{};
+
+    var correct_in: [4][1]f64 = .{ .{5}, .{2.3}, .{-10}, .{-800.62} };
+    var correct_out: [4][1]f64 = .{ .{5}, .{2.3}, .{-10}, .{-800.62} };
+
+    var correct_loss = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.01);
+    //verify no loss, and no changed vars
+    try std.testing.expectEqual(correct_loss, 0);
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], 1);
+}
+
+test "simple linear single layer training" {
+    //the most basic, 1 weight, learning a linear relationship
+    const nn_t = NN(.{Layer(1, 1, g.linear)}, 1, 1);
+    var nn: nn_t = nn_t{};
+
+    var correct_in: [1][1]f64 = .{.{5}};
+    var correct_out: [1][1]f64 = .{.{10}};
+
+    var loss_1 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+
+    // move in correct direction
+    try std.testing.expectEqual(loss_1, 25); //5*5
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], 6); // 5 * 2(5-10) * -1 * 0.1
+
+    var loss_2 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+
+    try std.testing.expectEqual(loss_2, 400); //((6*5)-10)**2
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // 6 * 2(30-10) * -1 * 0.1
+    //correct directions, would eventually converge
+}

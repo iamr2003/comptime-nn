@@ -74,7 +74,7 @@ pub fn main() !void {
                 &batch_in,
                 &batch_out,
                 loss,
-                // (1.0 / @as(f64 , @floatFromInt(step))),
+                // (1.0 / @as(f64 , @floatFromInt(step)))
                 // 0.00001
                 1 - (0.9 * @as(f64, @floatFromInt(step)) / 100),
             );
