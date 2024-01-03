@@ -413,25 +413,34 @@ test "simple non linear single layer training positive" {
     try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // 6 * 2(30-10) * -1 * 0.1
 }
 
-// test "simple non linear single layer training negative" {
-//     //the most basic, 1 weight, with a relu relationship
-//     const nn_t = NN(.{Layer(1, 1, g.linear)}, 1, 1);
-//     var nn: nn_t = nn_t{};
-//
-//
-//     var correct_in: [1][1]f64 = .{.{5}};
-//
-//     //impossible to output, so will have issues
-//     var correct_out: [1][1]f64 = .{.{-10}};
-//
-//     var loss_1 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
-//
-//     // move in correct direction
-//     try std.testing.expectEqual(loss_1, 25); //5*5
-//     try std.testing.expectEqual(nn.layers.l1.weights[0][0], 6); // 5 * 2(5-10) * -1 * 0.1
-//
-//     var loss_2 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
-//
-//     try std.testing.expectEqual(loss_2, 400); //((6*5)-10)**2
-//     try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // 6 * 2(30-10) * -1 * 0.1
-// }
+//do a test with relu, then linear on a negative val
+
+test "simple noninear, linear" {
+    const nn_t = NN(.{Layer(1, 1, g.relu),Layer(1, 1, g.linear)}, 1, 1);
+    var nn: nn_t = nn_t{};
+
+    //with positive should do exactly the same thing
+
+    var correct_in: [1][1]f64 = .{.{5}};
+    var correct_out: [1][1]f64 = .{.{-10}};
+
+    var loss_1 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+
+    // move in correct direction
+    try std.testing.expectEqual(loss_1, 225); //5*5
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // 5 * 2(5+10) * -1 * 0.1
+    try std.testing.expectEqual(nn.layers.l2.weights[0][0], -14); // 5 * 2(5+10) * -1 * 0.1
+
+    var loss_2 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss, 0.1);
+
+    try std.testing.expectEqual(loss_2, 100); //((0)-10)**2
+    // try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // 6 * 2(30-10) * -1 * 0.
+
+    try std.testing.expectEqual(nn.layers.l2.weights[0][0], -14); // had no effect
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // had no effect
+}
+
+//next tests should be with multinode, multi layer
+//bc this is where I suspect there may be an issue
+
+//the most basic, 1 weight, with a relu relationship
