@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const rand = std.rand;
 
 const g = @import("grad.zig");
 const add = g.add;
@@ -231,9 +232,53 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
 
             return avg_loss;
         }
+
+        pub fn randomize_weights(layers: *layers_flat_types, rand_range: [2]f64, gen: rand.Random) void {
+            // write simpler to verify
+            if (layer_types.len >= 1) {
+                for (0..layers.l1.param_count) |weight_id| {
+                    var i = weight_id;
+                    var input_index = i % layers.l1.input_size;
+                    var output_index = @divFloor(i, layers.l1.input_size);
+                    layers.l1.weights[output_index][input_index] = randFromRange(rand_range, gen);
+                }
+            }
+
+            if (layer_types.len >= 2) {
+                for (0..layers.l2.param_count) |weight_id| {
+                    var i = weight_id;
+                    var input_index = i % layers.l2.input_size;
+                    var output_index = @divFloor(i, layers.l2.input_size);
+                    layers.l2.weights[output_index][input_index] = randFromRange(rand_range, gen);
+                }
+            }
+
+            if (layer_types.len >= 3) {
+                for (0..layers.l3.param_count) |weight_id| {
+                    var i = weight_id;
+                    var input_index = i % layers.l3.input_size;
+                    var output_index = @divFloor(i, layers.l3.input_size);
+                    layers.l3.weights[output_index][input_index] = randFromRange(rand_range, gen);
+                }
+            }
+            if (layer_types.len >= 4) {
+                for (0..layers.l4.param_count) |weight_id| {
+                    var i = weight_id;
+                    var offset = layers.l1.param_count + layers.l2.param_count + layers.l3.param_count;
+                    _ = offset;
+                    var input_index = i % layers.l4.input_size;
+                    var output_index = @divFloor(i, layers.l4.input_size);
+                    layers.l4.weights[output_index][input_index] = randFromRange(rand_range, gen);
+                }
+            }
+        }
     };
 
     return nn_type;
+}
+
+pub fn randFromRange(range: [2]f64, random: rand.Random) f64 {
+    return range[0] + (range[1] - range[0]) * random.float(f64);
 }
 
 //overall goal is to get gradient of each weight with respect to the evaluation metric
@@ -416,7 +461,7 @@ test "simple non linear single layer training positive" {
 //do a test with relu, then linear on a negative val
 
 test "simple noninear, linear" {
-    const nn_t = NN(.{Layer(1, 1, g.relu),Layer(1, 1, g.linear)}, 1, 1);
+    const nn_t = NN(.{ Layer(1, 1, g.relu), Layer(1, 1, g.linear) }, 1, 1);
     var nn: nn_t = nn_t{};
 
     //with positive should do exactly the same thing

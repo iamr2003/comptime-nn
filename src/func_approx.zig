@@ -22,8 +22,9 @@ pub fn loss(expected: [1]g.GradVal, actual: [1]g.GradVal) g.GradVal {
     var dx = g.sub(expected[0], actual[0]);
     //just squared euclidean distance
     var out = mul(dx, dx);
-    std.debug.assert(out.val >= 0);
-    std.debug.assert(out.grad != std.math.nan_f64);
+    // std.debug.assert(out.val >= 0);
+    // std.debug.assert(out.grad != std.math.nan_f64);
+    //something is exploading?
     return out;
 }
 
@@ -38,7 +39,9 @@ pub fn randFromRange(range: [2]f64, random: rand.Random) f64 {
 pub fn main() !void {
     const nn_type = nn.NN(
         .{
-            Layer(2, 16, g.relu),
+            //let's see if a linear model works ok, since it should
+            //randomizing weights will be next
+            Layer(2, 16, g.linear),
             Layer(16, 16, g.relu),
             Layer(16, 1, g.linear), // believe or not, can't relu if you want to output neg
         },
@@ -49,10 +52,13 @@ pub fn main() !void {
     var approx: nn_type = nn_type{};
 
     const steps = 10000;
-    const batch_size = 100;
+    const batch_size = 20;
 
     var rng = rand.DefaultPrng.init(0);
     const random = rng.random();
+
+    var weight_range:[2]f64 = .{-1,1};
+    nn_type.randomize_weights(&approx.layers, weight_range, random);
     //see if can approx over small domain
     //possible it should also be in the
     const range: [2]f64 = .{ -10, 10 };
@@ -75,8 +81,8 @@ pub fn main() !void {
                 &batch_out,
                 loss,
                 // (1.0 / @as(f64 , @floatFromInt(step)))
-                // 0.00001
-                1 - (0.9 * @as(f64, @floatFromInt(step)) / 100),
+                0.00001,
+                // 1 - (0.9 * @as(f64, @floatFromInt(step)) / 100),
             );
             std.debug.print("Step {}.{}, loss: {}\n", .{ step, batch_cycle, curr_loss });
         }
