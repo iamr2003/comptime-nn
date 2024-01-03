@@ -485,6 +485,40 @@ test "simple noninear, linear" {
     try std.testing.expectEqual(nn.layers.l1.weights[0][0], -14); // had no effect
 }
 
+test "verify weight changes" {
+    const nn_t = NN(
+        .{
+            Layer(100, 50, g.relu),
+            Layer(50, 120, g.linear),
+            Layer(120, 1000, g.relu),
+        },
+        100,
+        1000,
+    );
+    var nn: nn_t = nn_t{};
+    var rng = rand.DefaultPrng.init(0);
+    const random = rng.random();
+    var weight_range: [2]f64 = .{ -10, -5 };
+    nn_t.randomize_weights(&nn.layers, weight_range, random);
+
+    //check for each layer within range
+    for (nn.layers.l1.weights) |weight_arr| {
+        for (weight_arr) |weight| {
+            try std.testing.expect(weight >= weight_range[0] and weight < weight_range[1]);
+        }
+    }
+    for (nn.layers.l2.weights) |weight_arr| {
+        for (weight_arr) |weight| {
+            try std.testing.expect(weight >= weight_range[0] and weight < weight_range[1]);
+        }
+    }
+    for (nn.layers.l3.weights) |weight_arr| {
+        for (weight_arr) |weight| {
+            try std.testing.expect(weight >= weight_range[0] and weight < weight_range[1]);
+        }
+    }
+}
+
 //next tests should be with multinode, multi layer
 //bc this is where I suspect there may be an issue
 

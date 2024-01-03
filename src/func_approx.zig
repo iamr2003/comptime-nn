@@ -42,7 +42,7 @@ pub fn main() !void {
             //let's see if a linear model works ok, since it should
             //randomizing weights will be next
             Layer(2, 16, g.linear),
-            Layer(16, 16, g.relu),
+            Layer(16, 16, g.linear),
             Layer(16, 1, g.linear), // believe or not, can't relu if you want to output neg
         },
         2,
