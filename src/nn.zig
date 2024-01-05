@@ -193,7 +193,7 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
 
             //more hardcoding, that again compiles out-- otherwise indexing gets fun
             if (layer_types.len >= 1) {
-                for (0..layers.l1.param_count) |weight_id| {
+                inline for (0..layers.l1.param_count) |weight_id| {
                     var i = weight_id;
                     var input_index = i % layers.l1.input_size;
                     var output_index = @divFloor(i, layers.l1.input_size);
@@ -202,7 +202,7 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
             }
 
             if (layer_types.len >= 2) {
-                for (0..layers.l2.param_count) |weight_id| {
+                inline for (0..layers.l2.param_count) |weight_id| {
                     var i = weight_id;
                     var offset = layers.l1.param_count;
                     var input_index = i % layers.l2.input_size;
@@ -212,7 +212,7 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
             }
 
             if (layer_types.len >= 3) {
-                for (0..layers.l3.param_count) |weight_id| {
+                inline for (0..layers.l3.param_count) |weight_id| {
                     var i = weight_id;
                     var offset = layers.l1.param_count + layers.l2.param_count;
                     var input_index = i % layers.l3.input_size;
@@ -221,7 +221,7 @@ pub fn NN(comptime layer_types: anytype, comptime inputs: usize, comptime output
                 }
             }
             if (layer_types.len >= 4) {
-                for (0..layers.l4.param_count) |weight_id| {
+                inline for (0..layers.l4.param_count) |weight_id| {
                     var i = weight_id;
                     var offset = layers.l1.param_count + layers.l2.param_count + layers.l3.param_count;
                     var input_index = i % layers.l4.input_size;
@@ -525,9 +525,6 @@ fn square_loss_2d(expect: [2]g.GradVal, actual: [2]g.GradVal) g.GradVal {
     return add(mul(dx, dx), mul(dy, dy));
 }
 
-//next tests should be with multinode, multi layer
-//bc this is where I suspect there may be an issue
-// THIS TEST NEXT, then simpler task
 test "multinode single layer" {
     //4 weights
     const nn_t = NN(.{Layer(2, 2, g.linear)}, 2, 2);
@@ -548,4 +545,11 @@ test "multinode single layer" {
     try std.testing.expectEqual(nn.layers.l1.weights[1][0], 3); // 1 -= 0.5 * 2 * 2(3-4)
     try std.testing.expectEqual(nn.layers.l1.weights[1][1], 5); // 1 -= 0.5 * 4 * 2(3-4)
 
+}
+
+test "multinode multi layer" {
+    //8 weights
+    const nn_t = NN(.{Layer(2, 2, g.linear),Layer(2, 2, g.linear)}, 2, 2);
+    var nn: nn_t = nn_t{};
+    _ = nn;
 }
