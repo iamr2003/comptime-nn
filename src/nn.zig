@@ -519,7 +519,33 @@ test "verify weight changes" {
     }
 }
 
+fn square_loss_2d(expect: [2]g.GradVal, actual: [2]g.GradVal) g.GradVal {
+    var dx = g.sub(expect[0], actual[0]);
+    var dy = g.sub(expect[1], actual[1]);
+    return add(mul(dx, dx), mul(dy, dy));
+}
+
 //next tests should be with multinode, multi layer
 //bc this is where I suspect there may be an issue
+// THIS TEST NEXT, then simpler task
+test "multinode single layer" {
+    //4 weights
+    const nn_t = NN(.{Layer(2, 2, g.linear)}, 2, 2);
+    var nn: nn_t = nn_t{};
 
-//the most basic, 1 weight, with a relu relationship
+    //simple scaling for now
+    var correct_in: [1][2]f64 = .{.{ 2, 4 }};
+    var correct_out: [1][2]f64 = .{.{ 2, 4 }};
+
+    try std.testing.expectEqual(nn_t.forward(nn.layers, correct_in[0]), .{ 3, 3 });
+
+    var loss_1 = nn_t.train_step(&nn.layers, &correct_in, &correct_out, square_loss_2d, 1);
+    // _ = loss_1;
+
+    try std.testing.expectEqual(loss_1, 2); // 16+ 64
+    try std.testing.expectEqual(nn.layers.l1.weights[0][0], -1); // 1 -= 0.5 * 2 * 2(3-2)
+    try std.testing.expectEqual(nn.layers.l1.weights[0][1], -3); // 1 -= 0.5 * 4 * 2(3-2)
+    try std.testing.expectEqual(nn.layers.l1.weights[1][0], 3); // 1 -= 0.5 * 2 * 2(3-4)
+    try std.testing.expectEqual(nn.layers.l1.weights[1][1], 5); // 1 -= 0.5 * 4 * 2(3-4)
+
+}
